@@ -7,30 +7,45 @@ import {
   PanelHeader,
   Tabs,
   HorizontalScroll,
-  Group,
-  List,
   HeaderButton,
-  Div,
-  ScreenSpinner
+  ScreenSpinner,
+  Gallery,
+  Search,
+  Alert
 } from "@vkontakte/vkui";
 import Icon24Add from "@vkontakte/icons/dist/24/add";
 import VKConnect from "@vkontakte/vkui-connect";
 import loc from "../../loc";
-import { getMovies, getLists, setUserId } from "../../services";
+import {
+  getMovies,
+  getLists,
+  setUserId,
+  findUser,
+  createUser,
+  getUserId
+} from "../../services";
 import MoviesTabItem from "./MoviesTabItem";
-import MoviesCell from "./MoviesCell";
+import MoviesList from "./MoviesList";
+
+let prevActiveList = 0;
 
 class MoviesView extends React.Component {
   state = {
     isLoading: false,
     popout: null,
-    lists: [],
     activeList: 0,
-    movies: []
+    lists: [],
+    movies: [],
+    search: ""
   };
+
+  componentWillUnmount() {
+    prevActiveList = this.state.activeList;
+  }
 
   componentDidMount() {
     this.getUser();
+    this.setState({ activeList: prevActiveList });
   }
 
   setActiveList = e => {
@@ -53,54 +68,69 @@ class MoviesView extends React.Component {
     this.setState({ movies, isLoading: false });
   };
 
-  silentUpdateMovies = async () => {
-    const movies = await getMovies();
-
-    this.setState({ movies });
+  onSearchChange = search => {
+    this.setState({ search });
   };
 
-  getUser() {
-    this.setState({ isLoading: true, popout: <ScreenSpinner /> });
+  get movies() {
+    const search = this.state.search.toLowerCase();
+    const filteredMovies = this.state.movies.filter(
+      movie => movie.title.toLowerCase().indexOf(search) > -1
+    );
 
+    return filteredMovies;
+  }
+
+  getUser() {
     VKConnect.subscribe(async e => {
       switch (e.detail.type) {
         case "VKWebAppGetUserInfoResult":
-          await setUserId(e.detail.data.id);
+          this.setState({ isLoading: true });
+          const userId = e.detail.data.id;
+          if (!(await findUser(userId))) {
+            await this.setState({ popout: <ScreenSpinner /> });
+            await createUser(userId);
+          }
+          setUserId(userId);
           await this.updateLists();
           await this.updateMovies();
           await this.setState({ isLoading: false, popout: null });
           break;
         default:
+          if (!getUserId()) this.setState({ popout: <ScreenSpinner /> });
           break;
       }
     });
+
     VKConnect.send("VKWebAppGetUserInfo", {});
   }
 
   renderMovies() {
-    const { movies, activeList } = this.state;
-    const activeMovies = movies.filter(movie =>
-      movie.lists.some(list => list === activeList)
-    );
+    const { activeList, lists, search } = this.state;
+    const { history } = this.props;
 
     return (
-      <React.Fragment>
-        {(activeMovies.length && (
-          <Group>
-            <List>
-              {activeMovies.map((movie, i) => (
-                <MoviesCell
-                  key={i}
-                  id={i}
-                  movie={movie}
-                  update={this.silentUpdateMovies}
-                  go={this.props.go}
-                />
-              ))}
-            </List>
-          </Group>
-        )) || <Div align="center">{loc.emptyText}</Div>}
-      </React.Fragment>
+      <div>
+        <Search value={search} onChange={this.onSearchChange} />
+        <Gallery
+          align="center"
+          style={{
+            height: "100%",
+            width: "100%"
+          }}
+          slideIndex={activeList}
+          onChange={slideIndex => this.setState({ activeList: slideIndex })}
+        >
+          {lists.map((list, i) => (
+            <MoviesList
+              key={i}
+              listId={i}
+              movies={this.movies}
+              history={history}
+            />
+          ))}
+        </Gallery>
+      </div>
     );
   }
 
@@ -127,12 +157,12 @@ class MoviesView extends React.Component {
   }
 
   renderPanelHeader() {
-    const { go } = this.props;
+    const { history } = this.props;
 
     return (
       <PanelHeader
         left={
-          <HeaderButton onClick={go} data-to="addMovieView">
+          <HeaderButton onClick={() => history.push("AddMovieView")}>
             <Icon24Add />
           </HeaderButton>
         }
@@ -149,8 +179,7 @@ class MoviesView extends React.Component {
         style={{
           display: "flex",
           alignItems: "center",
-          flexDirection: "column",
-          marginTop: 60
+          flexDirection: "column"
         }}
       >
         <Spinner size="large" style={{ marginTop: 20 }} />
@@ -164,12 +193,17 @@ class MoviesView extends React.Component {
     const { isLoading, popout } = this.state;
 
     return (
-      <View popout={popout} activePanel="movies">
-        <Panel id="movies">
+      <View id="moviesView" popout={popout} activePanel="moviesPanel">
+        <Panel id="moviesPanel">
           {this.renderPanelHeader()}
-          {(isLoading && this.renderSpinner()) || this.renderMoviesLists()}
-          <div style={{ marginTop: 60 }}>
-            {!isLoading && this.renderMovies()}
+          {isLoading && !popout && this.renderSpinner()}
+          {!popout && !isLoading && this.renderMoviesLists()}
+          <div
+            style={{
+              marginTop: 48
+            }}
+          >
+            {!popout && !isLoading && this.renderMovies()}
           </div>
         </Panel>
       </View>

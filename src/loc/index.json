@@ -1,5 +1,6 @@
 {
 	"appTitle": "Фильмыки",
 	"emptyText": "не найдено",
-	"editText": "Изменить"
+	"editText": "Изменить",
+	"deleteText": "Удалить"
 }

@@ -18,34 +18,31 @@ export function getUserId() {
   return String(userId);
 }
 
-async function findUser() {
+export async function findUser(userId) {
   const request = (await db
     .collection("users")
-    .doc(getUserId())
+    .doc(String(userId))
     .get()).exists;
 
   return request;
 }
 
-async function initUser() {
-  if (!(await findUser())) {
-    const lists = (await db
-      .collection("users")
-      .doc("default")
-      .get()).data().lists;
+export async function createUser(userId) {
+  const lists = (await db
+    .collection("users")
+    .doc("default")
+    .get()).data().lists;
 
-    const movies = [];
+  const movies = [];
 
-    await db
-      .collection("users")
-      .doc(getUserId())
-      .set({ lists, movies });
-  }
+  await db
+    .collection("users")
+    .doc(String(userId))
+    .set({ lists, movies });
 }
 
-export async function setUserId(id) {
+export function setUserId(id) {
   userId = id;
-  await initUser();
 }
 
 export async function getMovies() {

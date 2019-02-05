@@ -21,8 +21,22 @@ module.exports = {
       {
         test: /\.css$/,
         use: ["style-loader", "css-loader"]
+      },
+      {
+        test: /\.svg$/,
+        use: [
+          { loader: "svg-sprite-loader", options: {} },
+          "svg-fill-loader",
+          "svgo-loader"
+        ]
       }
     ]
   },
-  plugins: [new MiniCssExtractPlugin({ filename: "bundle.css" }), new HtmlWebpackPlugin({ template: "public/index.html" })]
+  plugins: [
+    new MiniCssExtractPlugin({ filename: "bundle.css" }),
+    new HtmlWebpackPlugin({ template: "public/index.html" })
+  ],
+  devServer: {
+    historyApiFallback: true
+  }
 };

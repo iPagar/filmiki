@@ -12,10 +12,21 @@ import {
   Radio,
   Spinner,
   Checkbox,
-  ScreenSpinner
+  ScreenSpinner,
+  platform,
+  IOS,
+  Div
 } from "@vkontakte/vkui";
 import loc from "../../loc";
-import { getLists, getEditMovie, updateMovie } from "../../services";
+import {
+  getLists,
+  getEditMovie,
+  updateMovie,
+  deleteMovie
+} from "../../services";
+import Icon24Back from "@vkontakte/icons/dist/24/back";
+
+const osname = platform();
 
 class EditMovieView extends React.Component {
   constructor(props) {
@@ -66,9 +77,7 @@ class EditMovieView extends React.Component {
       popout: null
     });
 
-    e.currentTarget = e.target;
-
-    this.props.go(e);
+    this.props.history.goBack();
   };
 
   onChangeTitle = e => {
@@ -82,6 +91,24 @@ class EditMovieView extends React.Component {
   onInvalidTitle = e => {
     e.preventDefault();
     e.currentTarget.focus();
+  };
+
+  onRemove = async e => {
+    e.preventDefault();
+
+    const { moviePrev } = this.state;
+
+    await this.setState({
+      popout: <ScreenSpinner />
+    });
+
+    await deleteMovie(moviePrev);
+
+    await this.setState({
+      popout: null
+    });
+
+    this.props.history.goBack();
   };
 
   async updateLists() {
@@ -149,35 +176,47 @@ class EditMovieView extends React.Component {
   renderMovieInfo() {
     const { movie } = this.state;
     return (
-      <FormLayout
-        getRef={e => {
-          this.listsRef = e;
-        }}
-        onSubmit={this.movieSubmit}
-        data-to="moviesView"
-      >
-        <Input
-          type="text"
-          top="Название"
-          onChange={this.onChangeTitle}
-          onInvalid={this.onInvalidTitle}
-          defaultValue={movie.title}
-          required
-        />
-        {this.renderLists()}
-        <Button size="xl">{loc.editText}</Button>
-      </FormLayout>
+      <div>
+        <FormLayout
+          getRef={e => {
+            this.listsRef = e;
+          }}
+          onSubmit={this.movieSubmit}
+        >
+          <Input
+            type="text"
+            top="Название"
+            onChange={this.onChangeTitle}
+            onInvalid={this.onInvalidTitle}
+            defaultValue={movie.title}
+            required
+          />
+          {this.renderLists()}
+          <Button size="xl">{loc.editText}</Button>
+        </FormLayout>
+        <Div>
+          <Button
+            size="xl"
+            style={{
+              backgroundColor: "var(--destructive)"
+            }}
+            onClick={this.onRemove}
+          >
+            {loc.deleteText}
+          </Button>
+        </Div>
+      </div>
     );
   }
 
   renderPanelHeader() {
-    const { go } = this.props;
+    const { history } = this.props;
 
     return (
       <PanelHeader
         left={
-          <HeaderButton onClick={go} data-to="moviesView">
-            Отменить
+          <HeaderButton onClick={() => history.goBack()}>
+            {osname === IOS ? "Отменить" : <Icon24Back />}
           </HeaderButton>
         }
         noShadow
@@ -218,8 +257,6 @@ class EditMovieView extends React.Component {
   }
 }
 
-EditMovieView.propTypes = {
-  go: PropTypes.func.isRequired
-};
+EditMovieView.propTypes = {};
 
 export default EditMovieView;

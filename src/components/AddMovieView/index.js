@@ -12,10 +12,15 @@ import {
   Radio,
   Spinner,
   Checkbox,
-  ScreenSpinner
+  ScreenSpinner,
+  platform,
+  IOS
 } from "@vkontakte/vkui";
 import { getLists, addMovie } from "../../services";
 import loc from "../../loc";
+import Icon24Back from "@vkontakte/icons/dist/24/back";
+
+const osname = platform();
 
 class AddMovieView extends React.Component {
   constructor(props) {
@@ -63,9 +68,7 @@ class AddMovieView extends React.Component {
       popout: null
     });
 
-    e.currentTarget = e.target;
-
-    this.props.go(e);
+    this.props.history.goBack();
   };
 
   onChangeTitle = e => {
@@ -150,13 +153,13 @@ class AddMovieView extends React.Component {
   }
 
   renderPanelHeader() {
-    const { go } = this.props;
+    const { history } = this.props;
 
     return (
       <PanelHeader
         left={
-          <HeaderButton onClick={go} data-to="moviesView">
-            Отменить
+          <HeaderButton onClick={() => history.goBack()} data-to="moviesView">
+            {osname === IOS ? "Отменить" : <Icon24Back />}
           </HeaderButton>
         }
         noShadow
@@ -187,8 +190,8 @@ class AddMovieView extends React.Component {
     const { isLoading, popout } = this.state;
 
     return (
-      <View popout={popout} activePanel="addMovie">
-        <Panel id="addMovie">
+      <View id="view" popout={popout} activePanel="addMoviePanel">
+        <Panel id="addMoviePanel">
           {this.renderPanelHeader()}
           {(isLoading && this.renderSpinner()) || this.renderMovieInfo()}
         </Panel>
@@ -197,8 +200,6 @@ class AddMovieView extends React.Component {
   }
 }
 
-AddMovieView.propTypes = {
-  go: PropTypes.func.isRequired
-};
+AddMovieView.propTypes = {};
 
 export default AddMovieView;
